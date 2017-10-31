@@ -15,25 +15,23 @@ class A3C(object):
             [self.model.pi_loss, self.model.vf_loss, self.model.global_step, self.model.train_op], feed_dict)
         return (pi_loss, vf_loss), global_step
 
-    def reset(self):
-        return [np.zeros((1, self.model.cell_size)), np.zeros((1, self.model.cell_size))]
-
     def sync_from_target(self):  # run by a local
         sess = get_default_session()
-        sess.run([self.model.sync_op])
+        sess.run([
+            self.model.sync_op
+        ])
 
-    def get_v(self, ob, state_in):
+    def get_v(self, ob):
         sess = get_default_session()
-        return sess.run(self.model.v, {self.model.obs: ob, self.model.state_in: state_in})
+        return sess.run(self.model.v, {self.model.obs: ob})
 
-    def step(self, ob, state_in):  # run by a local
+    def step(self, ob):  # run by a local
         sess = get_default_session()
-        pi, v, s_out = sess.run([self.model.pi, self.model.v, self.model.state_out],
-                                feed_dict={self.model.obs: [ob], self.model.state_in: state_in})  # ob[np.newaxis, :]})
-        act = np.random.choice(pi.shape[1], p=pi.ravel())  # select action w.r.t the actions prob
-        return act, v[0], s_out
+        pi, v = sess.run([self.model.pi, self.model.v], feed_dict={self.model.obs: [ob]})  # ob[np.newaxis, :]})
+        action = np.random.choice(pi.shape[1], p=pi.ravel())  # select action w.r.t the actions prob
+        return action, v[0]
 
-    def get_batch(self, batch, ob1, done, state_in, gamma=.95, _lambda=1.):
+    def get_batch(self, batch, ob1, done, gamma=.95, _lambda=1.):
 
         batch = np.array(batch)
         obs = batch[:, 0]
@@ -43,7 +41,7 @@ class A3C(object):
 
         r_hat = 0
         if done == False:
-            r_hat = self.get_v(ob=[ob1], state_in=state_in)[0]
+            r_hat = self.get_v(ob=[ob1])[0]
 
         # d_rws, adv = compute_gae(rws =rws, vs= vs, r_hat=r_hat, gamma=gamma, _lambda=_lambda)
         d_rws = []
@@ -58,7 +56,6 @@ class A3C(object):
             self.model.obs: np.vstack(obs),
             self.model.acts: acts,
             self.model.rws: d_rws,
-            self.model.adv: adv,  # d_rws - np.array(vs)
-            self.model.state_in: self.reset()
+            self.model.adv: adv  # d_rws - np.array(vs)
         }
         return feed_dict

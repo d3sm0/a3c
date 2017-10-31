@@ -12,21 +12,18 @@ class Worker(object):
         self.gamma = training_config['gamma']
         self._lambda = training_config['_lambda']
         self.ob = self.env.reset()
-        # self.s_in = self.agent.reset()
         self.ep_r = 0
         self.local_t = 0
 
     def run_once(self):
         batch = []
-        s_in = self.agent.reset()
         for t in range(self.config['update_freq']):
-            act, v, s_out = self.agent.step(self.ob, s_in)
+            act, v = self.agent.step(self.ob)
             ob1, r, done, info = self.env.step(act)
             self.ep_r += r
             self.local_t += 1
             batch.append((self.ob, act, r, v))
             self.ob = ob1
-            s_in = s_out
             if done:
                 self.ob = self.env.reset()
                 self.ep_stats['total_ep'] += 1
@@ -34,8 +31,7 @@ class Worker(object):
                 self.ep_r = 0
                 break
 
-        feed_dict = self.agent.get_batch(batch=batch, ob1=ob1, done=done, state_in=s_out, gamma=self.gamma,
-                                         _lambda=self._lambda)
+        feed_dict = self.agent.get_batch(batch=batch, ob1=ob1, done=done, gamma=self.gamma, _lambda=self._lambda)
         return feed_dict, done
 
     def run(self, sess, coord):

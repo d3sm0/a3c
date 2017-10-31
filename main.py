@@ -5,7 +5,7 @@ from model import ActorCritic
 from worker import Worker
 
 network_config = {
-    'units': 64,
+    'units': [64],
     'act': tf.nn.relu,
     'lr': 1e-3,
     'optim': tf.train.RMSPropOptimizer,
